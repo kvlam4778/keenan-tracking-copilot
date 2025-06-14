@@ -116,10 +116,27 @@ async function analyzeImageWithGemini() {
     if (!selectedImageBase64) { showMessage("Please select an image first."); return; }
     geminiLoadingIndicator.classList.remove('hidden');
     analyzeButton.disabled = true;
-    const apiKey = "";
+    // TODO: Insert your Gemini API key below
+    const apiKey = "YOUR_GEMINI_API_KEY";
+    if (!apiKey || apiKey === "YOUR_GEMINI_API_KEY") {
+        showMessage("Gemini API key is missing. Please add your API key in the script.js file.");
+        geminiLoadingIndicator.classList.add('hidden');
+        analyzeButton.disabled = false;
+        return;
+    }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const prompt = `Analyze the image of this meal. Identify the food items and categorize them into the following JSON schema. If an item isn't a clear fit, place it in 'other'. If multiple items fit one category, list them as a comma-separated string. For example, 'Chicken, Fish' for protein. If a category is empty, return an empty string.`;
-    const payload = { contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: selectedImageBase64 }}]}], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { protein: { "type": "STRING" }, vegetable: { "type": "STRING" }, dairy: { "type": "STRING" }, fruit: { "type": "STRING" }, carbs: { "type": "STRING" }, other: { "type": "STRING" }}, required: ["protein", "vegetable", "dairy", "fruit", "carbs", "other"] }}};
+    const prompt = `Analyze the image of this meal. Identify the food items and categorize them into the following JSON schema. If an item isn't a clear fit, place it in 'other'. If multiple items fit a category, separate them by commas. Respond ONLY with JSON:
+
+{
+  "protein": "",
+  "vegetable": "",
+  "dairy": "",
+  "fruit": "",
+  "carbs": "",
+  "other": ""
+}
+`;
+    const payload = { contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: selectedImageBase64 }}]}], generationConfig: { responseMimeType: "application/json" }};
     try {
         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response.ok) { const errorBody = await response.text(); throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorBody}`); }
@@ -245,7 +262,11 @@ function renderAllEntries() {
 
     sortedDates.forEach(date => {
         const { foods, checkin } = groupedByDate[date];
-        foods.sort((a, b) => (a.loggedAt?.toMillis() || 0) - (b.loggedAt?.toMillis() || 0));
+        foods.sort((a, b) => {
+            const aTime = a.loggedAt && typeof a.loggedAt.toMillis === "function" ? a.loggedAt.toMillis() : 0;
+            const bTime = b.loggedAt && typeof b.loggedAt.toMillis === "function" ? b.loggedAt.toMillis() : 0;
+            return aTime - bTime;
+        });
 
         const dateHeader = document.createElement('h3');
         dateHeader.className = 'text-xl font-semibold text-orange-700 mt-6 mb-3';
@@ -285,7 +306,7 @@ function renderAllEntries() {
                         <p class="text-sm text-gray-600">Meal: ${entry.mealType}</p>
                     </div>
                     <button data-id="${entry.id}" data-name="${foodItems}" class="delete-food-btn p-1 rounded hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-red-500 hover:text-red-700"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12.56 0c1.153 0 2.242.078 3.223.224C9.308 5.78 9.93 5.69 10.59 5.69m0 0c0 .319.029.636.084.943m3.074 0a48.48 48.48 0 0 1-3.478-.397m-12.56 0c1.153 0 2.242.078 3.223.224C9.308 5.78 9.93 5.69 10.59 5.69m0 0c0 .319.029.636.084.943m0 0c.319.029.636.084.943.084m6.148-3.541a48.473 48.473 0 0 0-3.478-.397m3.478.397a48.473 48.473 0 0 1 3.478.397m-11.516 12.176a2.25 2.25 0 0 1 2.244-2.077h4.512a2.25 2.25 0 0 1 2.244 2.077L18.16 19.673m-13.388 0L4.772 5.79m13.388 0a48.108 48.108 0 0 0-3.478-.397m-12.56 0c1.153 0 2.242.078 3.223.224C9.308 5.78 9.93 5.69 10.59 5.69m0 0c0 .319.029.636.084.943m3.074 0a48.48 48.48 0 0 1-3.478-.397m-12.56 0c1.153 0 2.242.078 3.223.224C9.308 5.78 9.93 5.69 10.59 5.69m0 0c0 .319.029.636.084.943m0 0c.319.029.636.084.943.084m6.148-3.541a48.473 48.473 0 0 0-3.478-.397m3.478.397a48.473 48.473 0 0 1 3.478.397" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-red-500 hover:text-red-700"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 `;
                 ul.appendChild(li);
@@ -394,7 +415,10 @@ function confirmDeleteEntry(entryId, foodName) {
     document.getElementById('confirmDeleteModal').classList.remove('hidden');
 }
 
-document.getElementById('confirmDeleteButton').addEventListener('click', () => { if (entryToDeleteId) deleteFoodEntry(entryToDeleteId); document.getElementById('confirmDeleteModal').classList.add('hidden'); });
+document.getElementById('confirmDeleteButton').addEventListener('click', () => { 
+    if (entryToDeleteId) deleteFoodEntry(entryToDeleteId); 
+    document.getElementById('confirmDeleteModal').classList.add('hidden'); 
+});
 document.getElementById('cancelDeleteButton').addEventListener('click', () => document.getElementById('confirmDeleteModal').classList.add('hidden'));
 foodLogContainer.addEventListener('click', (e) => {
     const deleteBtn = e.target.closest('.delete-food-btn');
